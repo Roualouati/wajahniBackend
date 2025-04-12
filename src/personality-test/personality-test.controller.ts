@@ -1,4 +1,3 @@
-// src/personality/personality-test.controller.ts
 import { Controller, Post, Get, Put, Param, Body } from '@nestjs/common';
 import { PersonalityTestService } from './personality-test.service';
 import { PrismaService } from '../prisma/prisma.service';

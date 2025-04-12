@@ -11,21 +11,25 @@ export class PersonalityTestService {
   ) {}
 
   private readonly options = ["Agree", "Neutral", "Disagree"];
-// In personality-test.service.ts
 async getTestResult(testId: number) {
   return this.prisma.personalityTest.findUnique({
     where: { id: testId },
     select: { personalityType: true }
   });
 }
-  // src/personality-test/personality-test.service.ts
 async startTest(userId: number) {
-  // 1. Create the test first
+  const userExists = await this.prisma.users.findUnique({
+    where: { id: userId }
+  });
+
+  if (!userExists) {
+    throw new Error(`User with ID ${userId} not found`);
+  }
+
   const test = await this.prisma.personalityTest.create({
     data: { userId }
   });
 
-  // 2. Create default critiques for this test
   const defaultCritiques = [
     { name: "Extraversion", description: "Measures social orientation" },
     { name: "Intuition", description: "Measures information processing style" },
@@ -41,9 +45,10 @@ async startTest(userId: number) {
           testId: test.id
         }
       })
-  )
+    )
   );
-  // 3. Get all critiques with questions
+
+
   const critiques = await this.prisma.personalityCritique.findMany({
     where: { testId: test.id },
     include: { questions: true }
@@ -53,7 +58,6 @@ async startTest(userId: number) {
     throw new Error('Failed to initialize critiques');
   }
 
-  // 4. Generate questions for first critique
   const firstCritique = critiques[0];
   const questions = await this.generateQuestions(firstCritique.id);
   
@@ -103,10 +107,8 @@ async startTest(userId: number) {
   }
 
   async completeCritique(testId: number, currentCritiqueId: number, remainingCritiques: any[]) {
-    // 1. Calculate score for current critique
     await this.calculateScore(currentCritiqueId);
 
-    // 2. If more critiques remaining, return next one
     if (remainingCritiques.length > 0) {
       const nextCritique = remainingCritiques[0];
       const questions = await this.generateQuestions(nextCritique.id);
@@ -119,7 +121,6 @@ async startTest(userId: number) {
       };
     }
 
-    // 3. If no more critiques, complete test
     const personalityType = await this.determinePersonalityType(testId);
     await this.prisma.personalityTest.update({
       where: { id: testId },
@@ -163,13 +164,11 @@ async startTest(userId: number) {
       where: { testId }
     });
 
-    // Prepare scores for OpenAI
     const scores = {};
     critiques.forEach(c => {
       scores[c.name] = c.score || 0;
     });
 
-    // Use OpenAI to determine final type
     return this.openai.determinePersonalityType(scores);
   }
 }
