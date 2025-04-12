@@ -31,7 +31,6 @@ export class PdfService {
       const dataBuffer = fs.readFileSync(filePath);
       const { text, metadata } = await pdfParse(dataBuffer);
       
-      // Enhanced table detection with multiple strategies
       const tables = this.detectTablesAdvanced(text);
       
       return {
@@ -53,13 +52,10 @@ export class PdfService {
     
     if (lines.length < 2) return tables;
 
-    // Strategy 1: Look for obvious table patterns
     const potentialTables = this.findPotentialTables(lines);
     
-    // Strategy 2: Look for aligned columns
     const columnBasedTables = this.findColumnAlignedTables(lines);
     
-    // Combine results from different strategies
     return [...potentialTables, ...columnBasedTables].filter(table => 
       table.headers.length > 0 && table.rows.length > 0
     );
@@ -71,7 +67,6 @@ export class PdfService {
     let inTable = false;
 
     for (const line of lines) {
-      // Detect table start (look for header-like lines)
       if (this.isPotentialHeader(line) && !inTable) {
         inTable = true;
         currentTable = [line];
@@ -79,7 +74,6 @@ export class PdfService {
       }
 
       if (inTable) {
-        // Detect table end (empty line or non-table line)
         if (line.trim() === '' || !this.isTableRow(line)) {
           if (currentTable.length >= 2) {
             const table = this.extractTable(currentTable);
@@ -95,7 +89,6 @@ export class PdfService {
       }
     }
 
-    // Add last table if we're still in one
     if (inTable && currentTable.length >= 2) {
       const table = this.extractTable(currentTable);
       if (table.headers.length > 0) {
@@ -129,12 +122,10 @@ export class PdfService {
   private detectColumnPositions(lines: string[]): number[] {
     const columnPositions = new Set<number>();
     
-    // Analyze first few lines to find common column starts
     for (let i = 0; i < Math.min(10, lines.length); i++) {
       const line = lines[i];
       let pos = 0;
       
-      // Look for transitions between text and whitespace
       let inText = false;
       for (let j = 0; j < line.length; j++) {
         if (line[j] !== ' ' && !inText) {
@@ -191,13 +182,11 @@ export class PdfService {
   }
 
   private isPotentialHeader(line: string): boolean {
-    // Look for lines with multiple words separated by spaces
     const parts = line.split(/\s{2,}/).filter(p => p.trim());
     return parts.length >= 3;
   }
 
   private isTableRow(line: string): boolean {
-    // Check if line has multiple values separated by whitespace
     const parts = line.split(/\s{2,}/).filter(p => p.trim());
     return parts.length >= 2;
   }

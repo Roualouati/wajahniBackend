@@ -42,7 +42,7 @@ importers:
         specifier: 1.4.5-lts.2
         version: 1.4.5-lts.2
       openai:
-        specifier: ^4.93.0
+        specifier: ^4.0.0
         version: 4.93.0
       passport:
         specifier: ^0.7.0

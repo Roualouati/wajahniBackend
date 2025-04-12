@@ -1,4 +1,4 @@
-// src/personality/personality-test.service.ts
+// src/personality-test/personality-test.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OpenAIService } from '../openai/openai.service';
@@ -11,75 +11,87 @@ export class PersonalityTestService {
   ) {}
 
   private readonly options = ["Agree", "Neutral", "Disagree"];
-async getTestResult(testId: number) {
-  return this.prisma.personalityTest.findUnique({
-    where: { id: testId },
-    select: { personalityType: true }
-  });
-}
-async startTest(userId: number) {
-  const userExists = await this.prisma.users.findUnique({
-    where: { id: userId }
-  });
 
-  if (!userExists) {
-    throw new Error(`User with ID ${userId} not found`);
+  async getTestResult(testId: number) {
+    return this.prisma.personalityTest.findUnique({
+      where: { id: testId },
+      select: { personalityType: true }
+    });
   }
 
-  const test = await this.prisma.personalityTest.create({
-    data: { userId }
-  });
-
-  const defaultCritiques = [
-    { name: "Extraversion", description: "Measures social orientation" },
-    { name: "Intuition", description: "Measures information processing style" },
-    { name: "Feeling", description: "Measures decision-making approach" },
-    { name: "Judging", description: "Measures structure preference" }
-  ];
-
-  await this.prisma.$transaction(
-    defaultCritiques.map(critique => 
-      this.prisma.personalityCritique.create({
-        data: {
-          ...critique,
-          testId: test.id
-        }
-      })
-    )
-  );
-
-
-  const critiques = await this.prisma.personalityCritique.findMany({
-    where: { testId: test.id },
-    include: { questions: true }
-  });
-
-  if (!critiques.length) {
-    throw new Error('Failed to initialize critiques');
-  }
-
-  const firstCritique = critiques[0];
-  const questions = await this.generateQuestions(firstCritique.id);
-  
-  return {
-    test,
-    currentCritique: firstCritique,
-    questions,
-    isLastCritique: critiques.length === 1,
-    remainingCritiques: critiques.slice(1)
-  };
-}
-
-  async generateQuestions(critiqueId: number, count = 5) {
-    const critique = await this.prisma.personalityCritique.findUnique({
-      where: { id: critiqueId }
+  async startTest(userId: number) {
+    const userExists = await this.prisma.users.findUnique({
+      where: { id: userId }
     });
 
-    if (!critique) throw new Error('Critique not found');
+    if (!userExists) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
 
+    const test = await this.prisma.personalityTest.create({
+      data: { userId }
+    });
+
+    const defaultCritiques = [
+      { name: "Extraversion", description: "Measures social orientation and energy" },
+      { name: "Intuition", description: "Measures information processing style" },
+      { name: "Feeling", description: "Measures decision-making approach" },
+      { name: "Judging", description: "Measures planning and structure preference" }
+    ];
+
+    await this.prisma.$transaction(
+      defaultCritiques.map(critique => 
+        this.prisma.personalityCritique.create({
+          data: {
+            ...critique,
+            testId: test.id
+          }
+        })
+      )
+    );
+
+    const critiques = await this.prisma.personalityCritique.findMany({
+      where: { testId: test.id },
+      orderBy: { id: 'asc' },
+      include: { questions: true }
+    });
+
+    if (!critiques.length) {
+      throw new Error('Failed to initialize critiques');
+    }
+
+    const firstCritique = critiques[0];
+    const questions = await this.generateDiverseQuestions(firstCritique.id, firstCritique.name);
+    
+    return {
+      test,
+      currentCritique: {
+        ...firstCritique,
+        description: this.getEnhancedDescription(firstCritique.name)
+      },
+      questions,
+      isLastCritique: critiques.length === 1,
+      remainingCritiques: critiques.slice(1).map(c => ({
+        ...c,
+        description: this.getEnhancedDescription(c.name)
+      }))
+    };
+  }
+
+  private getEnhancedDescription(critiqueName: string): string {
+    const descriptions = {
+      "Extraversion": "Assesses whether you gain energy from social interaction (Extraversion) or from alone time (Introversion)",
+      "Intuition": "Evaluates how you process information - through patterns and possibilities (Intuition) or concrete facts (Sensing)",
+      "Feeling": "Measures your decision-making style - values and harmony (Feeling) or logic and objectivity (Thinking)",
+      "Judging": "Examines your approach to structure - planned and organized (Judging) or flexible and spontaneous (Perceiving)"
+    };
+    return descriptions[critiqueName] || "Measures an important personality dimension";
+  }
+
+  private async generateDiverseQuestions(critiqueId: number, critiqueName: string, count = 5): Promise<any[]> {
     const questions = [];
     for (let i = 0; i < count; i++) {
-      const questionText = await this.openai.generateQuestion(critique.name);
+      const questionText = await this.openai.generateQuestion(critiqueName, i+1);
       
       const question = await this.prisma.personalityQuestion.create({
         data: {
@@ -91,7 +103,6 @@ async startTest(userId: number) {
       });
       questions.push(question);
     }
-
     return questions;
   }
 
@@ -111,13 +122,19 @@ async startTest(userId: number) {
 
     if (remainingCritiques.length > 0) {
       const nextCritique = remainingCritiques[0];
-      const questions = await this.generateQuestions(nextCritique.id);
+      const questions = await this.generateDiverseQuestions(nextCritique.id, nextCritique.name);
 
       return {
-        nextCritique,
+        nextCritique: {
+          ...nextCritique,
+          description: this.getEnhancedDescription(nextCritique.name)
+        },
         questions,
         isLastCritique: remainingCritiques.length === 1,
-        remainingCritiques: remainingCritiques.slice(1)
+        remainingCritiques: remainingCritiques.slice(1).map(c => ({
+          ...c,
+          description: this.getEnhancedDescription(c.name)
+        }))
       };
     }
 
