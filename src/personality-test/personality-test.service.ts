@@ -156,7 +156,6 @@ export class PersonalityTestService {
   }
 
   private async calculateScore(critiqueId: number) {
-    // First verify the critique exists
     const critiqueExists = await this.prisma.personalityCritique.findUnique({
       where: { id: critiqueId }
     });
@@ -172,7 +171,6 @@ export class PersonalityTestService {
       }
     });
   
-    // Check if there are answered questions
     if (questions.length === 0) {
       throw new Error(`No answered questions found for critique ${critiqueId}`);
     }

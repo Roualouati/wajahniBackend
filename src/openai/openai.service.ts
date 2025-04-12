@@ -30,7 +30,7 @@ export class OpenAIService {
           }
         ],
         max_tokens: 100,
-        temperature: 0.8 // Slightly higher temperature for more variety
+        temperature: 0.8 
       });
 
       return response.choices[0]?.message?.content?.trim() || '';
@@ -46,7 +46,6 @@ export class OpenAIService {
     description: string;
   }> {
     try {
-      // First get the type (using your existing logic)
       const typeResponse = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
@@ -81,7 +80,6 @@ export class OpenAIService {
         throw new Error(`Invalid MBTI format: ${type}`);
       }
   
-      // Now get a dynamic description based on the actual scores
       const descResponse = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
@@ -105,7 +103,7 @@ export class OpenAIService {
           }
         ],
         max_tokens: 100,
-        temperature: 0.7 // Slightly higher temp for creative descriptions
+        temperature: 0.7 
       });
   
       const description = descResponse.choices[0]?.message?.content?.trim() || 
@@ -119,7 +117,6 @@ export class OpenAIService {
     } catch (error) {
       console.error('Error determining personality type:', error);
       
-      // Fallback calculation if API fails
       const fallbackType = this.calculateFallbackType(scores);
       return {
         type: fallbackType,
