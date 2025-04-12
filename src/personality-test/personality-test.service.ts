@@ -138,24 +138,45 @@ export class PersonalityTestService {
       };
     }
 
-    const personalityType = await this.determinePersonalityType(testId);
+    const {type,description} = await this.determinePersonalityType(testId);
     await this.prisma.personalityTest.update({
       where: { id: testId },
       data: {
         isCompleted: true,
         completedAt: new Date(),
-        personalityType
+        personalityType: type,
+        personalityTypeDescription: description
+
       }
     });
 
-    return { completed: true, personalityType };
+    return {  completed: true, 
+      personalityType: type,
+      personalityDescription: description};
   }
 
   private async calculateScore(critiqueId: number) {
-    const questions = await this.prisma.personalityQuestion.findMany({
-      where: { critiqueId, selectedOption: { not: null } }
+    // First verify the critique exists
+    const critiqueExists = await this.prisma.personalityCritique.findUnique({
+      where: { id: critiqueId }
     });
-
+  
+    if (!critiqueExists) {
+      throw new Error(`Critique with ID ${critiqueId} not found`);
+    }
+  
+    const questions = await this.prisma.personalityQuestion.findMany({
+      where: { 
+        critiqueId, 
+        selectedOption: { not: null } 
+      }
+    });
+  
+    // Check if there are answered questions
+    if (questions.length === 0) {
+      throw new Error(`No answered questions found for critique ${critiqueId}`);
+    }
+  
     let score = 0;
     questions.forEach(q => {
       switch (q.selectedOption) {
@@ -164,16 +185,20 @@ export class PersonalityTestService {
         case 'Disagree': score += 0; break;
       }
     });
-
+  
     const maxScore = questions.length * 2;
     const percentage = Math.round((score / maxScore) * 100);
-
-    await this.prisma.personalityCritique.update({
-      where: { id: critiqueId },
-      data: { score: percentage }
-    });
-
-    return percentage;
+  
+    try {
+      await this.prisma.personalityCritique.update({
+        where: { id: critiqueId },
+        data: { score: percentage }
+      });
+      return percentage;
+    } catch (error) {
+      console.error(`Failed to update score for critique ${critiqueId}:`, error);
+      throw new Error(`Failed to update critique score`);
+    }
   }
 
   private async determinePersonalityType(testId: number) {

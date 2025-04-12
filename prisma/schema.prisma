@@ -34,7 +34,7 @@ model PersonalityTest {
   completedAt      DateTime?
   isCompleted      Boolean              @default(false)
   personalityType  String?              // Final result (e.g., "INFJ")
-  
+  personalityTypeDescription String?
   critiques        PersonalityCritique[]
   recommendations  Recommendation[]     // Added opposite relation
 }

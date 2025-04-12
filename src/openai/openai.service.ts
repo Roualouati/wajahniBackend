@@ -40,34 +40,100 @@ export class OpenAIService {
     }
   }
 
-  async determinePersonalityType(scores: Record<string, number>): Promise<string> {
+ 
+  async determinePersonalityType(scores: Record<string, number>): Promise<{
+    type: string;
+    description: string;
+  }> {
     try {
-      const response = await this.openai.chat.completions.create({
+      // First get the type (using your existing logic)
+      const typeResponse = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
-            content: 'Analyze these MBTI trait scores and return only the most likely 4-letter type:'
+            content: `You are an MBTI expert. Analyze these scores and return ONLY the 4-letter MBTI type code. 
+                      The response must be exactly 4 uppercase letters matching one of the 16 MBTI types.`
           },
           {
             role: 'user',
-            content: `Scores: ${JSON.stringify(scores)}\n\nConsider these interpretations:
-            - Extraversion (E) vs Introversion (I)
-            - Intuition (N) vs Sensing (S)
-            - Feeling (F) vs Thinking (T)
-            - Judging (J) vs Perceiving (P)
+            content: `Calculate the MBTI type based on these scores:
+            Extraversion: ${scores['Extraversion'] || 0}%
+            Intuition: ${scores['Intuition'] || 0}%
+            Feeling: ${scores['Feeling'] || 0}%
+            Judging: ${scores['Judging'] || 0}%
             
-            Return ONLY the 4-letter code (e.g., "INFJ")`
+            Rules:
+            1. Score ≥50% = first letter (E, N, F, J)
+            2. Score <50% = second letter (I, S, T, P)
+            3. Return ONLY the 4-letter code (e.g., "INFJ")`
           }
         ],
         max_tokens: 10,
-        temperature: 0.2 // Lower temperature for more consistent results
+        temperature: 0.1,
+        stop: ['\n']
       });
-
-      return response.choices[0]?.message?.content?.trim() || '';
+  
+      const type = typeResponse.choices[0]?.message?.content?.trim() || '';
+      const mbtiRegex = /^[EI][NS][FT][JP]$/;
+      
+      if (!mbtiRegex.test(type)) {
+        throw new Error(`Invalid MBTI format: ${type}`);
+      }
+  
+      // Now get a dynamic description based on the actual scores
+      const descResponse = await this.openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an MBTI expert. Create a personalized 1-2 sentence description of this personality type based on their specific trait scores. 
+                      Highlight which traits are strongest based on the percentages.`
+          },
+          {
+            role: 'user',
+            content: `Create a description for ${type} personality with these trait scores:
+            - Extraversion: ${scores['Extraversion'] || 0}% (${scores['Extraversion'] >= 50 ? 'E' : 'I'})
+            - Intuition: ${scores['Intuition'] || 0}% (${scores['Intuition'] >= 50 ? 'N' : 'S'})
+            - Feeling: ${scores['Feeling'] || 0}% (${scores['Feeling'] >= 50 ? 'F' : 'T'})
+            - Judging: ${scores['Judging'] || 0}% (${scores['Judging'] >= 50 ? 'J' : 'P'})
+            
+            Focus on:
+            1. Their strongest traits (highest percentages)
+            2. How these traits likely manifest
+            3. Keep it to 1-2 sentences maximum`
+          }
+        ],
+        max_tokens: 100,
+        temperature: 0.7 // Slightly higher temp for creative descriptions
+      });
+  
+      const description = descResponse.choices[0]?.message?.content?.trim() || 
+        `${type} personality with unique trait combinations`;
+  
+      return {
+        type,
+        description
+      };
+  
     } catch (error) {
       console.error('Error determining personality type:', error);
-      throw new Error('Failed to determine personality type');
+      
+      // Fallback calculation if API fails
+      const fallbackType = this.calculateFallbackType(scores);
+      return {
+        type: fallbackType,
+        description: `${fallbackType} personality with balanced traits`
+      };
     }
+  }
+
+  private calculateFallbackType(scores: Record<string, number>): string {
+    const e = (scores['Extraversion'] || 0) >= 50 ? 'E' : 'I';
+    const n = (scores['Intuition'] || 0) >= 50 ? 'N' : 'S';
+    const f = (scores['Feeling'] || 0) >= 50 ? 'F' : 'T';
+    const j = (scores['Judging'] || 0) >= 50 ? 'J' : 'P';
+    
+    return `${e}${n}${f}${j}`;
   }
 }

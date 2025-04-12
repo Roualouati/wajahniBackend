@@ -14,7 +14,7 @@ export class PersonalityTestController {
     return this.testService.startTest(parseInt(userId));
   }
 
-  @Put('questions/:questionId/answer')
+  @Put('/questions/:questionId/answer')
   async submitAnswer(
     @Param('questionId') questionId: string,
     @Body() body: { answer: string }
@@ -36,10 +36,6 @@ export class PersonalityTestController {
 
   @Get(':testId/result')
   async getResult(@Param('testId') testId: string) {
-    return this.prisma.personalityTest.findUnique({
-      where: { id: parseInt(testId) },
-      select: { personalityType: true }
-    });
+    return this.testService.getTestResult(parseInt(testId));
   }
-  
 }
