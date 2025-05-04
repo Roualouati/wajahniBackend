@@ -10,6 +10,8 @@ import { AdminModule } from './admin/admin.module';
 import { PersonalityModule } from './personality-test/personality-test.module';
 import { PdfService } from './pdf/pdf.service';
 import { PdfController } from './pdf/pdf.controller';
+import { BaccalaureateModule } from './competence-test/competence-test.module';
+import { RecommendationModule } from './recommendation/recommendation.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { PdfController } from './pdf/pdf.controller';
     }), 
     AdminModule,
     PersonalityModule,
+    BaccalaureateModule,
+    RecommendationModule,
     
     // Add MulterModule for file uploads
     MulterModule.register({

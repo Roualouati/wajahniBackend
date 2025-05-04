@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseInterceptors, UploadedFile, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { BaccalaureateType } from '@prisma/client';
 
 @Controller('user')
 export class UserController {
@@ -37,4 +38,46 @@ export class UserController {
   ) {
     return this.userService.updateUser(+id, editUser, file);
   }
+  @Get('bacType/:id')
+  async getBaccalaureateType(@Param('id') id: string) {
+    try {
+      if (!id || isNaN(+id)) {
+        throw new BadRequestException('Invalid user ID');
+      }
+      
+      const result = await this.userService.findBaccalaureateType(+id);
+      return {
+        success: true,
+        exists: result.exists,
+        bacType: result.type
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to fetch baccalaureate type',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+ 
+  @Post(':id/baccalaureate-type')
+  async editBaccalaureateType(
+    @Param('id') id: string,
+    @Body() body: { baccalaureateType: BaccalaureateType },
+  ) {
+    console.log('Received:', body);
+    return this.userService.editBaccalaureateType(+id, body.baccalaureateType);
+  }
+  
+  @Get('has-test/:userId')
+  async hasPersonalityTest(@Param('userId') userId: number) {
+    return {
+      hasTest: await this.userService.getPersonalityTestWithDetails(+userId),
+    };
+  }
+  @Get('has-baccalaureate/:userId')
+  async hasBaccalaureate(@Param('userId') userId: number) {
+    return {
+      hasBaccalaureate: await this.userService.getBaccalaureateWithDetails(+userId),
+    };
+}  
 }

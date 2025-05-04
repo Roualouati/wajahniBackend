@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "BaccalaureateType" AS ENUM ('EXPERIMENTAL_SCIENCES', 'COMPUTER_SCIENCE', 'LITERATURE', 'SPORTS', 'ECONOMICS_AND_MANAGEMENT', 'TECHNICAL', 'MATHEMATICS');
+
+-- AlterTable
+ALTER TABLE "Users" ADD COLUMN     "baccalaureateType" "BaccalaureateType";

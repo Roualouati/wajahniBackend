@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { hash } from 'argon2';
+import { Baccalaureate, BaccalaureateType, PersonalityTest } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -113,6 +114,102 @@ export class UserService {
       data: {
         password: hashedPassword,
       },
+    });
+  }
+  async findBaccalaureateType(userId: number): Promise<{ exists: boolean; type: BaccalaureateType | null }> {
+    try {
+      const baccalaureate = await this.prisma.baccalaureate.findUnique({
+        where: { userId },
+        select: { type: true },
+      });
+  
+      return {
+        exists: !!baccalaureate,
+        type: baccalaureate?.type ?? null
+      };
+    } catch (error) {
+      console.error('Error finding baccalaureate type:', error);
+      throw new Error('Failed to fetch baccalaureate type');
+    }
+  }
+  
+  async editBaccalaureateType(userId: number, baccalaureateType: BaccalaureateType) {
+    const baccalaureate = await this.prisma.baccalaureate.findUnique({
+      where: { userId },
+    });
+  
+    if (!baccalaureate) {
+      // Create the record if it doesn't exist
+      return this.prisma.baccalaureate.create({
+        data: {
+          userId,
+          type: baccalaureateType,
+        },
+      });
+    }
+  
+    // Otherwise update
+    return this.prisma.baccalaureate.update({
+      where: { userId },
+      data: { type: baccalaureateType },
+    });
+  }
+  
+  async getPersonalityTestWithDetails(userId: number): Promise<PersonalityTest | null> {
+    return this.prisma.personalityTest.findFirst({
+      where: { userId },
+      include: {
+        critiques: {
+          include: {
+            questions: {
+              select: {
+                id: true,
+                text: true,
+                options: true,
+                selectedOption: true,
+                position: true,
+                critique: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    score: true
+                  }
+                }
+              },
+              orderBy: {
+                position: 'asc'
+              }
+            }
+          },
+          orderBy: {
+            id: 'asc'
+          }
+        }
+      }
+    });
+  }
+  async getBaccalaureateWithDetails(userId: number): Promise<Baccalaureate | null> {
+    return this.prisma.baccalaureate.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            
+          }
+        },
+        experimentalSciences: true,
+        computerScience: true,
+        literature: true,
+        sports: true,
+        economicsAndManagement: true,
+        technical: true,
+        mathematics: true
+      }
     });
   }
 }

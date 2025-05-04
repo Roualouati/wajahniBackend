@@ -20,10 +20,147 @@ model Users {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   
+  baccalaureate     Baccalaureate?
   personalityTests   PersonalityTest[] 
-  competenceTests    CompetenceTest[] 
   recommendations    Recommendation[]
 }
+model Baccalaureate {
+  id       Int                 @id @default(autoincrement())
+  type     BaccalaureateType
+  userId   Int                 @unique
+  user     Users              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notePhilosophy  Float?
+  noteArabic     Float?
+  noteEnglish    Float?
+  noteFrench     Float?
+  noteSport      Float?
+  noteMathematics    Float? 
+  noteOptions    Float?
+  options    Options?
+  philosophyComment   String?
+  arabicComment       String?
+  englishComment     String?
+  frenshComment       String?
+  sportComment       String?
+  mathematicsComment  String?
+  optionComment      String?
+  globalComment       String?
+  generalAverage      Float?
+  Score             Float?
+  experimentalSciences ExperimentalSciencesBac?
+  computerScience      ComputerScienceBac?
+  literature           LiteratureBac?
+  sports               SportsBac?
+  economicsAndManagement EconomicsAndManagementBac?
+  technical            TechnicalBac?
+  mathematics          MathematicsBac?
+}
+enum Options {
+  CHINESE
+  SPANISH
+  GERMAN
+  DRAWING
+  RUSSIAN
+  MUSIC
+  ITALIAN
+  SCIENCE
+}
+
+model ExperimentalSciencesBac {
+  id                 Int             @id @default(autoincrement())
+  baccalaureateId    Int             @unique
+  baccalaureate      Baccalaureate   @relation(fields: [baccalaureateId], references: [id], onDelete: Cascade)
+  notePhysics       Float?  
+  physicsComment      String?
+
+  scienceNote       Float?
+  informaticsNote     Float?
+  scienceComment   String?
+  informaticsComment String?
+}
+model ComputerScienceBac {
+  id                 Int             @id @default(autoincrement())
+  baccalaureateId    Int             @unique
+  baccalaureate      Baccalaureate   @relation(fields: [baccalaureateId], references: [id], onDelete: Cascade)
+notePhysics       Float?  
+  physicsComment      String?
+  algorithmsNote      Float?
+  stiNote            Float?
+  algorithmsComment   String?
+  stiComment         String?
+}
+model LiteratureBac {
+  id                 Int             @id @default(autoincrement())
+  baccalaureateId    Int             @unique
+  baccalaureate      Baccalaureate   @relation(fields: [baccalaureateId], references: [id], onDelete: Cascade)
+  historyAndGeographyNote       Float?
+ 
+  islamicNote      Float?
+  informaticsNote     Float?
+  historyAndGeographyComment    String?
+  islamicComment    String?
+  informaticsComment String?
+  }
+model SportsBac {
+  id                 Int             @id @default(autoincrement())
+  baccalaureateId    Int             @unique
+  baccalaureate      Baccalaureate   @relation(fields: [baccalaureateId], references: [id], onDelete: Cascade)
+  biologicalSciencesNote Float?
+  physicalEducationNote Float?
+  informaticsNote     Float?
+  sportsSpecializationNote Float?
+  scienceNote       Float?
+  biologicalSciencesComment String?
+  physicalEducationComment String?
+  informaticsComment String?
+  sportsSpecializationComment String?
+  scienceComment    String?
+  notePhysics       Float?  
+  physicsComment      String?
+  
+  }
+
+
+
+model EconomicsAndManagementBac {
+  id                 Int             @id @default(autoincrement())
+  baccalaureateId    Int             @unique
+  baccalaureate      Baccalaureate   @relation(fields: [baccalaureateId], references: [id], onDelete: Cascade)
+
+  economicsNote     Float?
+  managementNote    Float?
+  informaticsNote     Float?
+  historyAndGeographyNote       Float?
+  economicsComment  String?
+  managementComment String?
+  informaticsComment String?
+  historyAndGeographyComment String?
+
+}
+model TechnicalBac {
+  id                 Int             @id @default(autoincrement())
+  baccalaureateId    Int             @unique
+  baccalaureate      Baccalaureate   @relation(fields: [baccalaureateId], references: [id], onDelete: Cascade)
+notePhysics       Float?  
+  physicsComment      String?
+  technicalNote     Float?
+  informaticsNote     Float?
+  technicalComment  String?
+  informaticsComment String?
+
+}
+model MathematicsBac {
+  id                 Int             @id @default(autoincrement())
+  baccalaureateId    Int             @unique
+  baccalaureate      Baccalaureate   @relation(fields: [baccalaureateId], references: [id], onDelete: Cascade)
+notePhysics       Float?  
+  physicsComment      String?
+  informaticsNote     Float?
+  scienceNote       Float?
+  informaticsComment String?
+  scienceComment    String?
+}
+
 
 // Personality Test Model
 model PersonalityTest {
@@ -38,6 +175,7 @@ model PersonalityTest {
   critiques        PersonalityCritique[]
   recommendations  Recommendation[]     // Added opposite relation
 }
+
 
 // Personality Critique Model
 model PersonalityCritique {
@@ -58,44 +196,9 @@ model PersonalityQuestion {
   selectedOption   String?              // User's selected option
   position         Int                  // Order of question in test
   critiqueId       Int
-  critique         PersonalityCritique  @relation(fields: [critiqueId], references: [id])
+  critique         PersonalityCritique  @relation(fields: [critiqueId], references: [id],onDelete: Cascade)
 }
 
-// Competence Test Model
-model CompetenceTest {
-  id               Int                  @id @default(autoincrement())
-  userId           Int
-  user             Users                 @relation(fields: [userId], references: [id],onDelete: Cascade)
-  startedAt        DateTime             @default(now())
-  completedAt      DateTime?
-  isCompleted      Boolean              @default(false)
-  strengths        Json?                // {"Teamwork": 85, "Problem Solving": 90} as JSON
-  
-  categories       CompetenceCategory[]
-  recommendations  Recommendation[]     // Added opposite relation
-}
-
-// Competence Category Model
-model CompetenceCategory {
-  id               Int                  @id @default(autoincrement())
-  name             String
-  description      String?
-  testId           Int
-  test             CompetenceTest       @relation(fields: [testId], references: [id])
-  score            Int?                 // Calculated score for this category
-  questions        CompetenceQuestion[]
-}
-
-// Competence Question Model
-model CompetenceQuestion {
-  id               Int                  @id @default(autoincrement())
-  text             String               // Generated by OpenAI
-  options          Json                 // [{"text": "Option A", "score": 5}, ...] as JSON
-  selectedOption   Int?                 // Index of selected option
-  position         Int                  // Order of question in test
-  categoryId       Int
-  category         CompetenceCategory   @relation(fields: [categoryId], references: [id])
-}
 
 // Recommendation Model
 model Recommendation {
@@ -103,7 +206,6 @@ model Recommendation {
   userId           Int
   user             Users                @relation(fields: [userId], references: [id], onDelete: Cascade)
   personalityType  String
-  strengths        Json                 // Competence strengths as JSON
   studyPaths       String[]             // Recommended paths (e.g., ["Medicine", "Architecture"])
   detailedAnalysis String               // AI-generated explanation
   createdAt        DateTime             @default(now())
@@ -111,12 +213,20 @@ model Recommendation {
   // Reference to the tests that generated this recommendation
   personalityTestId Int?
   personalityTest   PersonalityTest?    @relation(fields: [personalityTestId], references: [id])
-  competenceTestId  Int?
-  competenceTest    CompetenceTest?     @relation(fields: [competenceTestId], references: [id])
+  
 }
 
 // Enums
 enum Role {
   ADMIN
   USER
+}
+enum BaccalaureateType {
+  EXPERIMENTAL_SCIENCES
+  COMPUTER_SCIENCE
+  LITERATURE
+  SPORTS
+  ECONOMICS_AND_MANAGEMENT
+  TECHNICAL
+  MATHEMATICS
 }
